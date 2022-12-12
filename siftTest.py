@@ -79,7 +79,7 @@ try:
             print(len(matches))
             print("Avg Distance Between Features: ")
             print(sum(m.distance for m in matches)/len(matches))
-            # Draw Keypoints in image (previous and current frame)
+            # Draw Keypoints in image (previous and current frame keypoints)
             color_image = cv2.drawMatches(gray_image, 
                                         keypoints, 
                                         gray_image, 
