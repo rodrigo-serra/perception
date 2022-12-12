@@ -157,6 +157,66 @@ def siftSingleKeypoints(color_image):
     return color_image
 
 
+def computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints):
+    print(np.float32(keypoints[0].pt))
+    # Featured matched keypoints from images 1 and 2
+    pts1 = np.float32([keypoints[m.queryIdx].pt for m in matches])
+    pts2 = np.float32([prev_keypoints[m.trainIdx].pt for m in matches])
+
+    # Convert x, y coordinates into complex numbers
+    # so that the distances are much easier to compute
+    z1 = np.array([[complex(c[0],c[1]) for c in pts1]])
+    z2 = np.array([[complex(c[0],c[1]) for c in pts2]])
+
+    # Computes the intradistances between keypoints for each image
+    KP_dist1 = abs(z1.T - z1)
+    KP_dist2 = abs(z2.T - z2)
+
+    # Distance between featured matched keypoints
+    FM_dist = abs(z2 - z1)
+    # print("Num of Matches: ")
+    # print(FM_dist.shape[1])
+    # print("Avg Distance Between Features (px): ")
+    # print(np.sum(FM_dist) / FM_dist.shape[1])
+
+
+def siftKeypointsMatching(color_image, prev_descriptors, prev_keypoints, i):
+    # Square Radius
+    r = 80
+    # Crop Image
+    color_image = color_image[uy - r:uy + r, ux - r:ux + r, :]
+    # Convert image to grayscale for SIFT
+    gray_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
+    # Extract SIFT features
+    keypoints, descriptors = sift.detectAndCompute(gray_image, None)
+    # Find Matches Between Current Frame and Previous Frame
+    # Showed Them Live
+    if i != 0:
+        # Match descriptors
+        matches = bf.match(descriptors, prev_descriptors)
+        # Sort them in the order of their distance
+        matches = sorted(matches, key = lambda x:x.distance)
+
+        computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
+
+        # print("Num of Matches: ")
+        # print(len(matches))
+        # print("Avg Distance Between Features: ")
+        # print(sum(m.distance for m in matches)/len(matches))
+        # Draw Keypoints in image (previous and current frame keypoints)
+        # color_image = cv2.drawMatches(gray_image, 
+        #                             keypoints, 
+        #                             gray_image, 
+        #                             prev_keypoints, 
+        #                             matches[:1], 
+        #                             None, 
+        #                             flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+
+    prev_descriptors = descriptors
+    prev_keypoints = keypoints
+    i += 1
+    return color_image, prev_descriptors, prev_keypoints, i
+
 
 
 # Initialize Pose Detector
@@ -165,6 +225,8 @@ detector = holisticDetector()
 # Initialize SIFT
 sift = cv2.SIFT_create()
 
+# Feature Matching
+bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck = True)
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
@@ -195,7 +257,7 @@ else:
 # Start streaming
 pipeline.start(config)
 
-i = 0
+firstTimeRunning = 0
 
 try:
     while True:
@@ -215,14 +277,20 @@ try:
         img = detector.find(color_image, True, True, False, False)
         
         img = detector.getPoseImgLandmarks(img)
-        detector.printImgPointCoordinates(11)
+        # detector.printImgPointCoordinates(11)
         # print(img.shape)
         
         # Shoulder Info (Right Shoulder Img Prespective)
         # ID :11, u = x: 391, v = y: 187
         ux, uy = detector.returnImgPointCoordinates(11)
         if ux != -1 and uy != -1:
-          img = siftSingleKeypoints(img)
+            # img = siftSingleKeypoints(img)
+            if firstTimeRunning == 0:
+                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(color_image, [], [], 0)
+                firstTimeRunning += 1
+            else:
+                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(color_image, prev_descriptors, prev_keypoints, i)
+        
 
         cv2.imshow('RealSense', img)
         cv2.waitKey(1)
