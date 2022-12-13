@@ -143,22 +143,26 @@ class holisticDetector():
 
 
 
-def siftSingleKeypoints(color_image):
+def applySift(color_image, applyCrop, ux, uy):
     # Square Radius
-    r = 80
-    # Crop Image
-    color_image = color_image[uy - r:uy + r, ux - r:ux + r, :]
+    r = 20
+    if applyCrop:
+        # Crop Image
+        color_image = color_image[uy - r:uy + r, ux - r:ux + r, :]  
     # Convert image to grayscale for SIFT
     gray_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
     # Extract SIFT features
     keypoints, descriptors = sift.detectAndCompute(gray_image, None)
+    return color_image, gray_image, keypoints, descriptors
+
+def drawKeypointsImg(gray_image, keypoints, color_image):
     # Draw Keypoints in image (single image)
     color_image = cv2.drawKeypoints(gray_image, keypoints, color_image)
     return color_image
 
 
 def computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints):
-    print(np.float32(keypoints[0].pt))
+    # print(np.float32(keypoints[0].pt))
     # Featured matched keypoints from images 1 and 2
     pts1 = np.float32([keypoints[m.queryIdx].pt for m in matches])
     pts2 = np.float32([prev_keypoints[m.trainIdx].pt for m in matches])
@@ -174,21 +178,14 @@ def computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints):
 
     # Distance between featured matched keypoints
     FM_dist = abs(z2 - z1)
-    # print("Num of Matches: ")
-    # print(FM_dist.shape[1])
-    # print("Avg Distance Between Features (px): ")
-    # print(np.sum(FM_dist) / FM_dist.shape[1])
+    print("Num of Matches: ")
+    print(FM_dist.shape[1])
+    print("Avg Distance Between Features (px): ")
+    print(np.sum(FM_dist) / FM_dist.shape[1])
 
 
-def siftKeypointsMatching(color_image, prev_descriptors, prev_keypoints, i):
-    # Square Radius
-    r = 80
-    # Crop Image
-    color_image = color_image[uy - r:uy + r, ux - r:ux + r, :]
-    # Convert image to grayscale for SIFT
-    gray_image = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
-    # Extract SIFT features
-    keypoints, descriptors = sift.detectAndCompute(gray_image, None)
+def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, drawKeypoints):
+    color_image, gray_image, keypoints, descriptors = applySift(color_image, True, ux, uy)
     # Find Matches Between Current Frame and Previous Frame
     # Showed Them Live
     if i != 0:
@@ -201,21 +198,39 @@ def siftKeypointsMatching(color_image, prev_descriptors, prev_keypoints, i):
 
         # print("Num of Matches: ")
         # print(len(matches))
-        # print("Avg Distance Between Features: ")
+        # print("Avg Distance Between Features (not in px): ")
         # print(sum(m.distance for m in matches)/len(matches))
+        
         # Draw Keypoints in image (previous and current frame keypoints)
-        # color_image = cv2.drawMatches(gray_image, 
-        #                             keypoints, 
-        #                             gray_image, 
-        #                             prev_keypoints, 
-        #                             matches[:1], 
-        #                             None, 
-        #                             flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
+        if drawKeypoints:
+            color_image = cv2.drawMatches(gray_image, 
+                                        keypoints, 
+                                        gray_image, 
+                                        prev_keypoints, 
+                                        matches[:len(matches)], 
+                                        None, 
+                                        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
 
     prev_descriptors = descriptors
     prev_keypoints = keypoints
     i += 1
     return color_image, prev_descriptors, prev_keypoints, i
+
+
+def openCsvFile(headerTitle, filename):
+    header = [headerTitle]
+    f = open(filename, 'w')
+    # create the csv writer
+    writer = csv.writer(f)
+    # write the header
+    writer.writerow(header)
+    return f, writer
+
+def closeCsvFile(f):
+    f.close()
+
+
+
 
 
 
@@ -227,6 +242,12 @@ sift = cv2.SIFT_create()
 
 # Feature Matching
 bf = cv2.BFMatcher(cv2.NORM_L2, crossCheck = True)
+
+# Open CSV Files
+# f_keypoints, writerKeypoints = openCsvFile("keypoints", 'keypointsBg1.csv')
+# f_descriptors, writerDescriptors = openCsvFile("descriptors", 'descriptorsBg1.csv')
+
+
 
 # Configure depth and color streams
 pipeline = rs.pipeline()
@@ -257,8 +278,9 @@ else:
 # Start streaming
 pipeline.start(config)
 
-firstTimeRunning = 0
 
+
+firstTimeRunning = 0
 try:
     while True:
 
@@ -278,19 +300,28 @@ try:
         
         img = detector.getPoseImgLandmarks(img)
         # detector.printImgPointCoordinates(11)
-        # print(img.shape)
         
-        # Shoulder Info (Right Shoulder Img Prespective)
-        # ID :11, u = x: 391, v = y: 187
+        # Test SIFT and detect features in the current frame
+        # color_image, gray_image, keypoints, descriptors = applySift(img, False, -1, -1)
+        # color_image = drawKeypointsImg(gray_image, keypoints, color_image)
+        
+        # Test Feature Matching For Shoulder Between the Current and the Previous Frame
+        # Shoulder Info (Right Shoulder Img Prespective), ID :11
         ux, uy = detector.returnImgPointCoordinates(11)
         if ux != -1 and uy != -1:
-            # img = siftSingleKeypoints(img)
             if firstTimeRunning == 0:
-                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(color_image, [], [], 0)
+                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, [], [], 0, False)
                 firstTimeRunning += 1
             else:
-                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(color_image, prev_descriptors, prev_keypoints, i)
-        
+                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, False)
+
+
+            # Write to CSV
+            # print(type(prev_keypoints))
+            # print(type(prev_descriptors))
+            # writerKeypoints.writerow([prev_keypoints])
+            # writerDescriptors.writerow([prev_descriptors])
+
 
         cv2.imshow('RealSense', img)
         cv2.waitKey(1)
@@ -299,4 +330,7 @@ finally:
 
     # Stop streaming
     pipeline.stop()
+    # Close csv file
+    # closeCsvFile(f_keypoints)
+    # closeCsvFile(f_descriptors)
 
