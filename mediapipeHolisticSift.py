@@ -184,17 +184,22 @@ def computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints):
     print(np.sum(FM_dist) / FM_dist.shape[1])
 
 
+def applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints):
+    # Match descriptors
+    matches = bf.match(descriptors, prev_descriptors)
+    # Sort them in the order of their distance
+    matches = sorted(matches, key = lambda x:x.distance)
+
+    if len(matches) > 0:
+        computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
+
+
 def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, drawKeypoints):
     color_image, gray_image, keypoints, descriptors = applySift(color_image, True, ux, uy)
     # Find Matches Between Current Frame and Previous Frame
     # Showed Them Live
     if i != 0:
-        # Match descriptors
-        matches = bf.match(descriptors, prev_descriptors)
-        # Sort them in the order of their distance
-        matches = sorted(matches, key = lambda x:x.distance)
-
-        computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
+        applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints)
 
         # print("Num of Matches: ")
         # print(len(matches))
@@ -312,15 +317,23 @@ try:
             if firstTimeRunning == 0:
                 img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, [], [], 0, False)
                 firstTimeRunning += 1
+                bkground_descriptors = prev_descriptors
+                bkground_keypoints = prev_keypoints
             else:
                 img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, False)
 
 
             # Write to CSV
-            # print(type(prev_keypoints))
-            # print(type(prev_descriptors))
             # writerKeypoints.writerow([prev_keypoints])
             # writerDescriptors.writerow([prev_descriptors])
+            
+            print(len(prev_keypoints))
+            print(np.shape(prev_descriptors))
+
+            if len(prev_keypoints) > len(bkground_keypoints):
+                bkground_descriptors = prev_descriptors
+                bkground_keypoints = prev_keypoints
+
 
 
         cv2.imshow('RealSense', img)
