@@ -7,8 +7,6 @@ import mediapipe as mp
 import math
 import csv
 from PIL import Image, ImageDraw
-
-from scipy.spatial import Delaunay
 from scipy.spatial import ConvexHull
 
 class tridimensionalInfo():
@@ -176,8 +174,8 @@ def drawKeypointsImg(gray_image, keypoints, color_image):
     return color_image
 
 
+
 def computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints):
-    # print(np.float32(keypoints[0].pt))
     # Featured matched keypoints from images 1 and 2
     pts1 = np.float32([keypoints[m.queryIdx].pt for m in matches])
     pts2 = np.float32([prev_keypoints[m.trainIdx].pt for m in matches])
@@ -205,21 +203,23 @@ def applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints):
     # Sort them in the order of their distance
     matches = sorted(matches, key = lambda x:x.distance)
 
-    if len(matches) > 0:
-        computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
+    # if len(matches) > 0:
+    #     computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
+    
+    print("Num of Matches: ")
+    print(len(matches))
+    print("Avg Distance Between Features (not in px): ")
+    print(sum(m.distance for m in matches)/len(matches))
+
+    return matches
 
 
 def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, drawKeypoints):
-    color_image, gray_image, keypoints, descriptors = applySift(color_image, True, ux, uy)
+    color_image, gray_image, keypoints, descriptors = applySift(color_image, False, ux, uy)
     # Find Matches Between Current Frame and Previous Frame
     # Showed Them Live
     if i != 0:
-        applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints)
-
-        # print("Num of Matches: ")
-        # print(len(matches))
-        # print("Avg Distance Between Features (not in px): ")
-        # print(sum(m.distance for m in matches)/len(matches))
+        matches = applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints)
         
         # Draw Keypoints in image (previous and current frame keypoints)
         if drawKeypoints:
@@ -236,55 +236,6 @@ def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints,
     i += 1
     return color_image, prev_descriptors, prev_keypoints, i
 
-
-
-def alpha_shape(points, alpha, only_outer=True):
-    """
-    Compute the alpha shape (concave hull) of a set of points.
-    :param points: np.array of shape (n,2) points.
-    :param alpha: alpha value.
-    :param only_outer: boolean value to specify if we keep only the outer border
-    or also inner edges.
-    :return: set of (i,j) pairs representing edges of the alpha-shape. (i,j) are
-    the indices in the points array.
-    """
-    assert points.shape[0] > 3, "Need at least four points"
-
-    def add_edge(edges, i, j):
-        """
-        Add an edge between the i-th and j-th points,
-        if not in the list already
-        """
-        if (i, j) in edges or (j, i) in edges:
-            # already added
-            assert (j, i) in edges, "Can't go twice over same directed edge right?"
-            if only_outer:
-                # if both neighboring triangles are in shape, it's not a boundary edge
-                edges.remove((j, i))
-            return
-        edges.add((i, j))
-
-    tri = Delaunay(points)
-    edges = set()
-    # Loop over triangles:
-    # ia, ib, ic = indices of corner points of the triangle
-    for ia, ib, ic in tri.vertices:
-        pa = points[ia]
-        pb = points[ib]
-        pc = points[ic]
-        # Computing radius of triangle circumcircle
-        # www.mathalino.com/reviewer/derivation-of-formulas/derivation-of-formula-for-radius-of-circumcircle
-        a = np.sqrt((pa[0] - pb[0]) ** 2 + (pa[1] - pb[1]) ** 2)
-        b = np.sqrt((pb[0] - pc[0]) ** 2 + (pb[1] - pc[1]) ** 2)
-        c = np.sqrt((pc[0] - pa[0]) ** 2 + (pc[1] - pa[1]) ** 2)
-        s = (a + b + c) / 2.0
-        area = np.sqrt(s * (s - a) * (s - b) * (s - c))
-        circum_r = a * b * c / (4.0 * area)
-        if circum_r < alpha:
-            add_edge(edges, ia, ib)
-            add_edge(edges, ib, ic)
-            add_edge(edges, ic, ia)
-    return list(edges)
 
 
 
@@ -372,28 +323,20 @@ try:
             #     u, v = facepoint
             #     mask[v][u] = 255
             
-            img = cv2.bitwise_and(img, img, mask=mask)
+            color_image = cv2.bitwise_and(img, img, mask=mask)
 
-
-
-
-
-        # img = detector.getPoseImgLandmarks(img)
-        # detector.printImgPointCoordinates(11)
         
-        # Test SIFT and detect features in the current frame
-        # color_image, gray_image, keypoints, descriptors = applySift(img, False, -1, -1)
-        # color_image = drawKeypointsImg(gray_image, keypoints, color_image)
+            # Test SIFT and detect features in the current frame
+            # color_image, gray_image, keypoints, descriptors = applySift(color_image, False, -1, -1)
+            # color_image = drawKeypointsImg(gray_image, keypoints, color_image)
+            # img = color_image
         
-        # Test Feature Matching For Shoulder Between the Current and the Previous Frame
-        # Shoulder Info (Right Shoulder Img Prespective), ID :11
-        # ux, uy = detector.returnImgPointCoordinates(11)
-        # if ux != -1 and uy != -1:
-        #     if firstTimeRunning == 0:
-        #         img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, [], [], 0, False)
-        #         firstTimeRunning += 1
-        #     else:
-        #         img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, False)
+            # Test Feature Matching For Shoulder Between the Current and the Previous Frame
+            if firstTimeRunning == 0:
+                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(-1, -1, color_image, [], [], 0, False)
+                firstTimeRunning += 1
+            else:
+                img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(-1, -1, color_image, prev_descriptors, prev_keypoints, i, False)
 
 
 

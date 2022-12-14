@@ -192,6 +192,13 @@ def applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints):
 
     if len(matches) > 0:
         computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
+    
+    # print("Num of Matches: ")
+    # print(len(matches))
+    # print("Avg Distance Between Features (not in px): ")
+    # print(sum(m.distance for m in matches)/len(matches))
+
+    return matches
 
 
 def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, drawKeypoints):
@@ -199,13 +206,8 @@ def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints,
     # Find Matches Between Current Frame and Previous Frame
     # Showed Them Live
     if i != 0:
-        applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints)
+        matches = applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints)
 
-        # print("Num of Matches: ")
-        # print(len(matches))
-        # print("Avg Distance Between Features (not in px): ")
-        # print(sum(m.distance for m in matches)/len(matches))
-        
         # Draw Keypoints in image (previous and current frame keypoints)
         if drawKeypoints:
             color_image = cv2.drawMatches(gray_image, 
@@ -317,8 +319,6 @@ try:
             if firstTimeRunning == 0:
                 img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, [], [], 0, False)
                 firstTimeRunning += 1
-                bkground_descriptors = prev_descriptors
-                bkground_keypoints = prev_keypoints
             else:
                 img, prev_descriptors, prev_keypoints, i = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, i, False)
 
@@ -326,13 +326,6 @@ try:
             # Write to CSV
             # writerKeypoints.writerow([prev_keypoints])
             # writerDescriptors.writerow([prev_descriptors])
-            
-            print(len(prev_keypoints))
-            print(np.shape(prev_descriptors))
-
-            if len(prev_keypoints) > len(bkground_keypoints):
-                bkground_descriptors = prev_descriptors
-                bkground_keypoints = prev_keypoints
 
 
 
