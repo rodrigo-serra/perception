@@ -55,13 +55,6 @@ def applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints):
     # Sort them in the order of their distance
     matches = sorted(matches, key = lambda x:x.distance)
 
-    if len(matches) > 0:
-        # computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
-        print("Num of Matches: ")
-        print(len(matches))
-        print("Avg Distance Between Features (not in px): ")
-        print(sum(m.distance for m in matches)/len(matches))
-
     return matches
 
 
@@ -69,8 +62,13 @@ def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints,
     color_image, gray_image, keypoints, descriptors = applySift(color_image, cropImg, ux, uy, radius)
     # Find Matches Between Current Frame and Previous Frame
     # Showed Them Live
+    matches = []
     if i != 0:
         matches = applyMatching(descriptors, prev_descriptors, keypoints, prev_keypoints)
+        
+        # Get distance between keypoints in px
+        # if len(matches) > 0:
+        #     computeDistanceBetweenKeypoints(matches, prev_keypoints, keypoints)
         
         # Draw Keypoints in image (previous and current frame keypoints)
         if drawKeypoints:
@@ -85,5 +83,5 @@ def siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints,
     prev_descriptors = descriptors
     prev_keypoints = keypoints
     i += 1
-    return color_image, prev_descriptors, prev_keypoints, i
+    return color_image, prev_descriptors, prev_keypoints, i, matches
 

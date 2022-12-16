@@ -2,6 +2,18 @@ import cv2
 import mediapipe as mp
 import math
 
+class signature():
+    def __init__(self, keypoints, descriptors):
+        self.keypoints = keypoints
+        self.descriptors = descriptors
+
+
+class person():
+    def __init__(self, id, keypoints, descriptors):
+        self.id = id
+        self.face_sign = signature(keypoints, descriptors)
+
+
 class tridimensionalInfo():
     def __init__(self, x, y, z, visibility):
         self.x = x

@@ -129,8 +129,6 @@ try:
 
         printBodyMeasurements(writerShoulder, writerHip, writerTorso, writerRightArm, writerLeftArm)
 
-        # detector.getFaceLandmarks()
-
         cv2.imshow('RealSense', img)
         cv2.waitKey(1)
 

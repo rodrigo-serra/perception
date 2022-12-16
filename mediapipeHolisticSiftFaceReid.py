@@ -65,9 +65,6 @@ pipeline.start(config)
 # Initialize Pose Detector
 detector = holisticDetector()
 
-# Open CSV Files
-# f_matches, writerMatches = openCsvFile(["num_matches", "avg_distance"], 'matches.csv')
-
 ux = -1
 uy = -1
 prev_descriptors = []
@@ -76,6 +73,10 @@ iterator = 0
 drawKeypoints = False
 cropImg = False
 radius = 20
+
+personList = []
+personCounter = 0
+faceDetectionThreshold = 54
 
 try:
     while True:
@@ -98,23 +99,30 @@ try:
         if isFaceLandmarks:
             color_image = getFaceMask(img, detector.faceCoordinates)
         
-            # Test SIFT and detect features in the current frame
-            # color_image, gray_image, keypoints, descriptors = applySift(color_image, cropImg, ux, uy, radius)
-            # color_image = drawKeypointsImg(gray_image, keypoints, color_image)
-            # img = color_image
-        
-            # Test Feature Matching Between the Current and the Previous Frame
-            img, prev_descriptors, prev_keypoints, iterator, matches = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, iterator, drawKeypoints, cropImg, radius)
+            # Detect features in the current frame
+            color_image, gray_image, keypoints, descriptors = applySift(color_image, cropImg, ux, uy, radius)
             
-            if len(matches) > 0:
-                num_matches = len(matches)
-                avg_distance_matches = sum(m.distance for m in matches)/len(matches)
-                print("Num of Matches: ")
-                print(num_matches)
-                print("Avg Distance Between Features (not in px): ")
-                print(avg_distance_matches)
-                # Write to CSV
-                # writerMatches.writerow([num_matches, avg_distance_matches])
+            # First Detection
+            if len(personList) == 0:
+                p = person(personCounter, keypoints, descriptors)
+                personCounter += 1
+                personList.append(p)
+                print("ADDED FIRST PERSON!")
+            else:
+                # Person Recognition through feature matching
+                for p in personList:
+                    matches = applyMatching(descriptors, p.face_sign.descriptors, keypoints, p.face_sign.keypoints)
+                    if len(matches) > 0:
+                        avg_distance_matches = sum(m.distance for m in matches)/len(matches)
+                        print("Avg Distance Between Features (not in px): ")
+                        print(avg_distance_matches)
+                        if avg_distance_matches > faceDetectionThreshold:
+                            print("IT'S A NEW PERSON!")
+                        else:
+                            print("DETECTING PERSON: " + str(p.id))
+                            break
+                    else:
+                        print("NO MATCHES, IT'S A NEW PERSON!")
 
 
         cv2.imshow('RealSense', img)
@@ -124,5 +132,3 @@ finally:
 
     # Stop streaming
     pipeline.stop()
-    # Close csv file
-    # closeCsvFile(f_matches)

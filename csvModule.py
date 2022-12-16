@@ -1,7 +1,6 @@
 import csv
 
-def openCsvFile(headerTitle, filename):
-    header = [headerTitle]
+def openCsvFile(header, filename):
     f = open(filename, 'w')
     # create the csv writer
     writer = csv.writer(f)

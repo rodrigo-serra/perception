@@ -43,8 +43,8 @@ pipeline.start(config)
 detector = holisticDetector()
 
 # Open CSV Files
-f_keypoints, writerKeypoints = openCsvFile("keypoints", 'keypointsBg1.csv')
-f_descriptors, writerDescriptors = openCsvFile("descriptors", 'descriptorsBg1.csv')
+f_keypoints, writerKeypoints = openCsvFile(["keypoints"], 'keypointsBg1.csv')
+f_descriptors, writerDescriptors = openCsvFile(["descriptors"], 'descriptorsBg1.csv')
 
 ux = -1
 uy = -1
@@ -83,7 +83,7 @@ try:
             # color_image, gray_image, keypoints, descriptors = applySift(img, cropImg, ux, uy, radius)
             # img = drawKeypointsImg(gray_image, keypoints, color_image)
 
-            img, prev_descriptors, prev_keypoints, iterator = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, iterator, drawKeypoints, cropImg, radius)
+            img, prev_descriptors, prev_keypoints, iterator, matches = siftKeypointsMatching(ux, uy, color_image, prev_descriptors, prev_keypoints, iterator, drawKeypoints, cropImg, radius)
 
             # Write to CSV
             writerKeypoints.writerow([prev_keypoints])
