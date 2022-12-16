@@ -12,6 +12,7 @@ class person():
     def __init__(self, id, keypoints, descriptors):
         self.id = id
         self.face_sign = signature(keypoints, descriptors)
+        self.seen = 10
 
 
 class tridimensionalInfo():

@@ -76,7 +76,7 @@ radius = 20
 
 personList = []
 personCounter = 0
-faceDetectionThreshold = 54
+faceDetectionThreshold = 150
 
 try:
     while True:
@@ -114,15 +114,21 @@ try:
                     matches = applyMatching(descriptors, p.face_sign.descriptors, keypoints, p.face_sign.keypoints)
                     if len(matches) > 0:
                         avg_distance_matches = sum(m.distance for m in matches)/len(matches)
-                        print("Avg Distance Between Features (not in px): ")
-                        print(avg_distance_matches)
+                        # print("Avg Distance Between Features (not in px): ")
+                        # print(avg_distance_matches)
                         if avg_distance_matches > faceDetectionThreshold:
                             print("IT'S A NEW PERSON!")
+                            personCounter += 1
+                            personList.append(person(personCounter, keypoints, descriptors))
                         else:
                             print("DETECTING PERSON: " + str(p.id))
                             break
                     else:
                         print("NO MATCHES, IT'S A NEW PERSON!")
+
+                    p.seen -= 1
+                    if p.seen == 0:
+                        personList.remove(p)
 
 
         cv2.imshow('RealSense', img)

@@ -66,7 +66,7 @@ pipeline.start(config)
 detector = holisticDetector()
 
 # Open CSV Files
-# f_matches, writerMatches = openCsvFile(["num_matches", "avg_distance"], 'matches.csv')
+f_matches, writerMatches = openCsvFile(["num_matches", "avg_distance"], 'matches.csv')
 
 ux = -1
 uy = -1
@@ -114,7 +114,7 @@ try:
                 print("Avg Distance Between Features (not in px): ")
                 print(avg_distance_matches)
                 # Write to CSV
-                # writerMatches.writerow([num_matches, avg_distance_matches])
+                writerMatches.writerow([num_matches, avg_distance_matches])
 
 
         cv2.imshow('RealSense', img)
@@ -125,4 +125,4 @@ finally:
     # Stop streaming
     pipeline.stop()
     # Close csv file
-    # closeCsvFile(f_matches)
+    closeCsvFile(f_matches)
