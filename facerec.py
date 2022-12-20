@@ -72,6 +72,8 @@ try:
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
 
         face_locations, face_names = faceRecognition(frame, known_face_encodings, known_face_names)
+        print(face_locations)
+        print(face_names)
         frame = drawRectangleAroundFace(frame, face_locations, face_names)
                     
         cv2.imshow('RealSense', frame)

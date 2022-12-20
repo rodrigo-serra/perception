@@ -70,12 +70,11 @@ pipeline.start(config)
 detector = holisticDetector()
 
 personCounter = 0
+directory = os.getcwd()
 
 # Create arrays of known face encodings and their names
 known_face_encodings = []
 known_face_names = []
-
-start_time = time.time()
 
 try:
     while True:
@@ -97,25 +96,23 @@ try:
         isFaceLandmarks = detector.getFaceLandmarks(img)
         if isFaceLandmarks:
             img_masked = getFaceMask(img, detector.faceCoordinates)
+        
+            face_locations, face_names = faceRecognition(img_masked, known_face_encodings, known_face_names)
+            img = drawRectangleAroundFace(img, face_locations, face_names)
+            
+            c = 0
+            for name in face_names:
+                if name == "Unknown":
+                    imageRGB = cv2.cvtColor(img_masked, cv2.COLOR_BGR2RGB)
+                    # Save new image of Person (not required)
+                    im = Image.fromarray(imageRGB)
+                    im_name = directory + "/images/human_" + str(personCounter) + ".png"
+                    im.save(im_name)
+                    # Load new Person to enconder
+                    known_face_encodings.append(face_recognition.face_encodings(imageRGB)[0])
+                    known_face_names.append("Human #" + str(personCounter))
+                    personCounter += 1
 
-            # First Detection
-            if personCounter == 0 and exec_time > 2:
-                print("ADDED FIRST PERSON!")
-                imageRGB = cv2.cvtColor(img_masked, cv2.COLOR_BGR2RGB)
-                im = Image.fromarray(imageRGB)
-                directory = os.getcwd()
-                im_name = directory + "/images/human_" + str(personCounter) + ".png"
-                im.save(im_name)
-                loaded_img = face_recognition.load_image_file(im_name)
-                known_face_encodings.append(face_recognition.face_encodings(loaded_img)[0])
-                known_face_names.append("Human #" + str(personCounter))
-                personCounter += 1
-            else:
-                face_locations, face_names = faceRecognition(img, known_face_encodings, known_face_names)
-                img = drawRectangleAroundFace(img, face_locations, face_names)
-
-
-        exec_time = time.time() - start_time
 
         cv2.imshow('RealSense', img)
         cv2.waitKey(1)
