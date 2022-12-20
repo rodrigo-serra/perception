@@ -4,34 +4,9 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 import os
+
 from PIL import Image, ImageDraw
-from scipy.spatial import ConvexHull
-
-from holisticDetectorModule import *
-from siftModule import *
-from csvModule import *
 from facerecModule import *
-
-import time
-
-# Draw mask based on polygon
-def getFaceMask(img, points):
-    height, width, c = img.shape
-    mask_img = Image.new('L', (width, height), 0)
-
-    points = np.array(points)
-
-    hull = ConvexHull(points)
-    polygon = []
-    for v in hull.vertices:
-        polygon.append((points[v, 0], points[v, 1]))
-
-    ImageDraw.Draw(mask_img).polygon(polygon, outline=1, fill=1)
-    mask = np.array(mask_img)
-    
-    color_image = cv2.bitwise_and(img, img, mask=mask)
-
-    return color_image
 
 
 
@@ -66,18 +41,16 @@ pipeline.start(config)
 
 
 # VARIABLE INITIALIZATION
-# Initialize Pose Detector
-detector = holisticDetector()
+# Load a sample picture and learn how to recognize it.
 
-personCounter = 0
 directory = os.getcwd()
 
 # Create arrays of known face encodings and their names
 known_face_encodings = []
 known_face_names = []
 
-start_time = time.time()
-current_time = 0
+personCounter = 0
+process_this_frame = True
 
 try:
     while True:
@@ -90,35 +63,42 @@ try:
             continue
 
         # Convert images to numpy arrays
-        color_image = np.asanyarray(color_frame.get_data())
+        frame = np.asanyarray(color_frame.get_data())
 
         # Show images
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
-        img = detector.find(color_image, False, False, False, False)
-        
-        isFaceLandmarks = detector.getFaceLandmarks(img)
-        if isFaceLandmarks:
-            img_masked = getFaceMask(img, detector.faceCoordinates)
-        
-            face_locations, face_names = faceRecognition(img_masked, known_face_encodings, known_face_names)
-            img = drawRectangleAroundFace(img, face_locations, face_names)
+
+        if process_this_frame:
+            face_locations, face_names = faceRecognition(frame, known_face_encodings, known_face_names)
             
-            if current_time > 2:
-                for name in face_names:
+            if face_locations != []:
+                for (top, right, bottom, left), name in zip(face_locations, face_names):
                     if name == "Unknown":
+                        # Draw Mask
+                        mask = np.zeros(frame.shape[:2], dtype="uint8")
+                        cv2.rectangle(mask, (left, top), (right, bottom), 255, -1)
+                        # cv2.imshow("Rectangular Mask", mask)
+                        img_masked = cv2.bitwise_and(frame, frame, mask=mask)
+                        # Save Img and Add to Enconder
                         imageRGB = cv2.cvtColor(img_masked, cv2.COLOR_BGR2RGB)
                         # Save new image of Person (not required)
                         im = Image.fromarray(imageRGB)
                         im_name = directory + "/images/human_" + str(personCounter) + ".png"
                         im.save(im_name)
                         # Load new Person to enconder
-                        known_face_encodings.append(face_recognition.face_encodings(imageRGB)[0])
-                        known_face_names.append("Human #" + str(personCounter))
-                        personCounter += 1
+                        faceEnconder = face_recognition.face_encodings(imageRGB)
+                        if len(faceEnconder) > 0:
+                            known_face_encodings.append(faceEnconder[0])
+                            known_face_names.append("Human #" + str(personCounter))
+                            personCounter += 1
+                    else:
+                        print("Seeing " + name)
 
-
-        current_time = time.time() - start_time
-        cv2.imshow('RealSense', img)
+        
+        process_this_frame = not process_this_frame
+                                    
+        boxes_frame = drawRectangleAroundFace(frame, face_locations, face_names)
+        cv2.imshow('RealSense', boxes_frame)
         cv2.waitKey(1)
 
 finally:
