@@ -83,13 +83,13 @@ try:
                         imageRGB = cv2.cvtColor(img_masked, cv2.COLOR_BGR2RGB)
                         # Save new image of Person (not required)
                         im = Image.fromarray(imageRGB)
-                        im_name = directory + "/images/human_" + str(personCounter) + ".png"
+                        im_name = directory + "/images/h" + str(personCounter) + ".png"
                         im.save(im_name)
                         # Load new Person to enconder
                         faceEnconder = face_recognition.face_encodings(imageRGB)
                         if len(faceEnconder) > 0:
                             known_face_encodings.append(faceEnconder[0])
-                            known_face_names.append("Human #" + str(personCounter))
+                            known_face_names.append("H #" + str(personCounter))
                             personCounter += 1
                     else:
                         print("Seeing " + name)
