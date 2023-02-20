@@ -23,6 +23,7 @@ def getColorName(R,G,B):
 
 def readColor(img):
     # Find image center (in img x is width and y is height)
+    apply_median = True
     h, w, c = img.shape
     cx = int(w / 2)
     cy = int(h / 2)
@@ -40,13 +41,29 @@ def readColor(img):
     img_green_channel = img[cx_left:cx_right, cy_top:cy_bottom, 1]
     img_red_channel = img[cx_left:cx_right, cy_top:cy_bottom, 2]
 
-    blue_avg = int(np.average(img_blue_channel))
-    green_avg = int(np.average(img_green_channel))
-    red_avg = int(np.average(img_red_channel))
-    
-    # print("RGB CODE: " + str(red_avg) + "; " + str(green_avg) + "; " + str(blue_avg))
+    blue = np.average(img_blue_channel)
+    if np.isnan(blue):
+        return False
+    blue = int(blue)
 
-    color_name = getColorName(red_avg, green_avg, blue_avg)
+    green = np.average(img_green_channel)
+    if np.isnan(green):
+        return False
+    green = int(green)
+    
+    red = np.average(img_red_channel)
+    if np.isnan(red):
+        return False
+    red = int(red)
+
+    if apply_median:
+        blue = int(np.median(img_blue_channel))
+        green = int(np.median(img_green_channel))
+        red = int(np.median(img_red_channel))
+    
+    # print("RGB CODE: " + str(red) + "; " + str(green) + "; " + str(blue))
+
+    color_name = getColorName(red, green, blue)
     print("Color Name: " + color_name)
 
     return new_img
@@ -96,6 +113,22 @@ try:
 
         # Convert images to numpy arrays
         color_image = np.asanyarray(color_frame.get_data())
+
+        # CONTRAST AND BRIGHTNESS
+        # define the alpha and beta
+        alpha = 1.5 # Contrast control
+        beta = 10 # Brightness control
+        # call convertScaleAbs function
+        color_image = cv2.convertScaleAbs(color_image, alpha=alpha, beta=beta)
+
+
+        # SATURATION
+        # hsvImg = cv2.cvtColor(color_image,cv2.COLOR_BGR2HSV)
+        #multiple by a factor to change the saturation
+        # hsvImg[...,1] = hsvImg[...,1]*1.2
+        #multiple by a factor of less than 1 to reduce the brightness 
+        # hsvImg[...,2] = hsvImg[...,2]*0.6
+        # color_image = cv2.cvtColor(hsvImg,cv2.COLOR_HSV2BGR)
 
         color_image = readColor(color_image)
         
