@@ -7,10 +7,10 @@ import pandas as pd
 
 def getColorName(R,G,B):
     # Read CSV with color codes
+    file_name = 'basic_colors.csv'
     index=["color","color_name","hex","R","G","B"]
-    csv = pd.read_csv('colors.csv', names=index, header=None)
-    # print(csv)
-    
+    csv = pd.read_csv(file_name, names=index, header=None)
+  
     minimum = 10000
     cname = ""
     for i in range(len(csv)):
@@ -96,9 +96,6 @@ try:
 
         # Convert images to numpy arrays
         color_image = np.asanyarray(color_frame.get_data())
-
-        if i == 0:
-            i += 1
 
         color_image = readColor(color_image)
         
