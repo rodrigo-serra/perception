@@ -40,26 +40,21 @@ def readColor(img):
     img_blue_channel = img[cx_left:cx_right, cy_top:cy_bottom, 0]
     img_green_channel = img[cx_left:cx_right, cy_top:cy_bottom, 1]
     img_red_channel = img[cx_left:cx_right, cy_top:cy_bottom, 2]
-
-    blue = np.average(img_blue_channel)
-    if np.isnan(blue):
+        
+    if np.all(img_blue_channel != img_blue_channel):
         return False
+    blue = np.average(img_blue_channel)
     blue = int(blue)
 
-    green = np.average(img_green_channel)
-    if np.isnan(green):
+    if np.all(img_green_channel != img_green_channel):
         return False
+    green = np.average(img_green_channel)
     green = int(green)
     
-    red = np.average(img_red_channel)
-    if np.isnan(red):
+    if np.all(img_red_channel != img_red_channel):
         return False
+    red = np.average(img_red_channel)
     red = int(red)
-
-    if apply_median:
-        blue = int(np.median(img_blue_channel))
-        green = int(np.median(img_green_channel))
-        red = int(np.median(img_red_channel))
     
     # print("RGB CODE: " + str(red) + "; " + str(green) + "; " + str(blue))
 
