@@ -4,10 +4,11 @@ import pyrealsense2 as rs
 import numpy as np
 import cv2
 import pandas as pd
+from PIL import Image, ImageEnhance
 
 def getColorName(R,G,B):
     # Read CSV with color codes
-    file_name = 'basic_colors.csv'
+    file_name = 'basic_colors_simplified.csv'
     index=["color","color_name","hex","R","G","B"]
     csv = pd.read_csv(file_name, names=index, header=None)
   
@@ -109,23 +110,24 @@ try:
         # Convert images to numpy arrays
         color_image = np.asanyarray(color_frame.get_data())
 
-        # CONTRAST AND BRIGHTNESS
-        # define the alpha and beta
-        alpha = 1.5 # Contrast control
-        beta = 10 # Brightness control
-        # call convertScaleAbs function
-        color_image = cv2.convertScaleAbs(color_image, alpha=alpha, beta=beta)
+        applyContrast = False
+        if applyContrast:
+            # CONTRAST AND BRIGHTNESS
+            alpha = 1.5 # Contrast control
+            beta = 10 # Brightness control
+            color_image = cv2.convertScaleAbs(color_image, alpha=alpha, beta=beta)
 
+        applySaturation = True
+        if applySaturation:
+            # PIL, Creating object of Color class
+            color_coverted = cv2.cvtColor(color_image, cv2.COLOR_BGR2RGB)
+            pil_image = Image.fromarray(color_coverted)
+            color_image = ImageEnhance.Color(pil_image)
+            color_image = color_image.enhance(4.0)
+            color_image = np.array(color_image)  
+            color_image = color_image[:, :, ::-1].copy() # Convert RGB to BGR
 
-        # SATURATION
-        # hsvImg = cv2.cvtColor(color_image,cv2.COLOR_BGR2HSV)
-        #multiple by a factor to change the saturation
-        # hsvImg[...,1] = hsvImg[...,1]*1.2
-        #multiple by a factor of less than 1 to reduce the brightness 
-        # hsvImg[...,2] = hsvImg[...,2]*0.6
-        # color_image = cv2.cvtColor(hsvImg,cv2.COLOR_HSV2BGR)
-
-        color_image = readColor(color_image)
+        # color_image = readColor(color_image)
         
         # Show images
         cv2.namedWindow('RealSense', cv2.WINDOW_AUTOSIZE)
