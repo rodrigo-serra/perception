@@ -2,7 +2,7 @@
 
 from PIL import Image
 import cv2
-import os, json
+import os, json, sys
 import numpy as np
 from scipy.spatial import ConvexHull
 
@@ -65,8 +65,7 @@ def find_polygon(np_array, offset_columns=110):
     idxs = []
     for idx, r in enumerate(row_idx):
         idxs.append((columns_idx[idx] - offset_columns, r))
-        # idxs.append((r, columns_idx[idx]))
-
+        
     idxs = np.array(idxs)
 
     hull = ConvexHull(idxs)
@@ -81,9 +80,6 @@ def write_json(json_template_path, new_json_path, img_arr, img_name, polygon, la
     # Read Template
     with open(json_template_path) as json_file:
         data = json.load(json_file)
-
-    # print(data.keys())
-    # print(data["shapes"])
 
     # Convert Polygon
     new_polygon = []
@@ -100,33 +96,20 @@ def write_json(json_template_path, new_json_path, img_arr, img_name, polygon, la
     copy_data["imageWidth"] = int(width)
     copy_data["imageData"] = ""
     
-    # print(copy_data["imageWidth"])
-
     # Write Json
     json_object = json.dumps(copy_data, indent=4)
     with open(new_json_path, "w") as outfile:
         outfile.write(json_object)
 
 
-def main():
-    current_path = os.getcwd()
-    img_path = current_path + "/001_chips_can"
-    masks_path = img_path + "/masks"
-    name = "N1_0"
-    img = img_path + "/" + name + ".jpg"
-    pbm_file = masks_path + "/" + name + "_mask.pbm"
 
-    json_template_path = current_path + "/template.json"
-    new_json_path = current_path + "/" + name + ".json"
-
-    label_name = "pringles_chips_can"
-
+def getLabel(im_path, pbm_file_path, json_template_path, new_json_path, name, label_name):
     # Read RGB image
-    im = cv2.imread(img)
+    im = cv2.imread(im_path)
     height, width, _ = im.shape
 
     # Read the PBM file
-    with open(pbm_file, "rb") as f:
+    with open(pbm_file_path, "rb") as f:
         # Read the PBM file header (two lines)
         # print(f.readline())
         # print(f.readline())
@@ -159,18 +142,75 @@ def main():
     # print("Array content:\n", np_array)
 
     # Test mask on image
-    testMask(im, np_array)
+    # testMask(im, np_array)
 
     # Find Polygon
     polygon = find_polygon(np_array)
 
     # Display Image
-    displayResult(im, polygon, resize=True, desired_height=356, draw_polygon=True)
-    displayResult(np_array, polygon, show_mask=True, resize=True, desired_height=356, draw_polygon=True)
+    # displayResult(im, polygon, resize=True, desired_height=356, draw_polygon=True)
+    # displayResult(np_array, polygon, show_mask=True, resize=True, desired_height=356, draw_polygon=True)
 
     # Write json
     write_json(json_template_path, new_json_path, np_array, name, polygon, label_name)
 
+
+
+def fileExists(path, error_phrase):
+    if not os.path.exists(path):
+        print(error_phrase)
+        exit(1)
+
+
+
+def findFilesInDir(path_to_dir, extension):
+    files = []
+    for file in os.listdir(path_to_dir):
+        if file.endswith(extension):
+            files.append(file)
+
+    return files
+
+
+def main():
+    if len(sys.argv) < 5:
+        print("There are missing input arguments!")
+        exit(1)
+
+    path_to_rgb_imgs = sys.argv[1]
+    path_to_masks_imgs = sys.argv[2]
+    path_to_labelling_json_template = sys.argv[3]
+    label_name = sys.argv[4]
+    
+    if len(sys.argv) == 6:
+        num_images_to_label = int(sys.argv[5])
+        partial_labelling = True
+    else:
+        num_images_to_label = -1
+        partial_labelling = False
+
+    fileExists(path_to_rgb_imgs, 'The path to the rgb images is not correct!')
+    fileExists(path_to_masks_imgs, 'The path to the masks is not correct!')
+    fileExists(path_to_labelling_json_template, 'The path to the labelling json template file is not correct!')
+
+    rgb_imgs = findFilesInDir(path_to_rgb_imgs, '.jpg')
+    masks = findFilesInDir(path_to_masks_imgs, '.pbm')
+
+    for img in rgb_imgs:
+        img_name = img.split(".")[0]
+
+        if partial_labelling:
+            img_num = int(img_name.split("_")[1])
+            if img_num <= num_images_to_label:
+                img_path = path_to_rgb_imgs + "/" + img
+                pbm_path = path_to_masks_imgs + "/" + img_name + "_mask.pbm"
+                label_json_path = path_to_rgb_imgs + "/" + img_name + ".json" 
+                getLabel(img_path, pbm_path, path_to_labelling_json_template, label_json_path, img, label_name)
+        else:
+            img_path = path_to_rgb_imgs + "/" + img
+            pbm_path = path_to_masks_imgs + "/" + img_name + "_mask.pbm"
+            label_json_path = path_to_rgb_imgs + "/" + img_name + ".json" 
+            getLabel(img_path, pbm_path, path_to_labelling_json_template, label_json_path, img, label_name)
 
 if __name__ == "__main__":
     main()
