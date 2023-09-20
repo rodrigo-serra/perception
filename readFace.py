@@ -2,13 +2,16 @@
 
 from deepface import DeepFace
 import os, cv2
+import pandas as pd
 from utils.imgs_utils import ImgProcessingUtils
 from utils.files_utils import FilesUtils
+from utils.pandas_utils import PandasUtils
 
 class ReadFace():
     def __init__(self):
         self.ipu = ImgProcessingUtils()
         self.fu = FilesUtils()
+        self.pu = PandasUtils()
         self.models = ["VGG-Face", "Facenet", "Facenet512","OpenFace", "DeepFace", "DeepID", "ArcFace", "Dlib", "SFace"]
         self.backends = ["opencv", "ssd", "dlib", "mtcnn", "retinaface", "mediapipe"]
         self.metrics = ["cosine", "euclidean", "euclidean_l2"]
@@ -77,6 +80,36 @@ class ReadFace():
         print(res)
 
 
+    def findInDB(self, img, db_path):
+        face_dets = DeepFace.find(
+            img_path=img,
+            db_path=db_path,
+            model_name="VGG-Face",
+            distance_metric="cosine",
+            enforce_detection=True,
+            detector_backend="opencv",
+            align=True,
+            normalization="base",
+            silent=True,
+        )
+        print(isinstance(face_dets[0], pd.DataFrame))
+        data_frame = face_dets[0]
+        print(self.pu.getCellValueByColumnName(data_frame, 0, 'identity'))
+
+    
+    def analyzeExtraFeatures(img_path, actions=("emotion", "age", "gender", "race")):
+        objs = DeepFace.analyze(
+            img_path = img_path, 
+            actions = actions,
+            enforce_detection=True,
+            detector_backend="opencv",
+            align=True,
+            silent=True
+        )
+        print(objs)
+    
+
+
     def stream(self):
         res = DeepFace.stream(
             db_path = self.db_path,
@@ -105,9 +138,21 @@ def main():
     df = ReadFace()
 
     ## Detect Face
+    # person = 'michael_phelps'
+    # img1 = df.getImgFromDb(person, 1, 'jpg')
+    # df.detectFace(img1)
+
+    ## Find Face
+    # img = os.getcwd() + '/mp_new.jpg'
+    # db_path = os.getcwd() + '/db/'
+    # df.findInDB(img, db_path)
+
+    ## Face Extra Analysis
+    # img = os.getcwd() + '/mp_new.jpg'
     person = 'michael_phelps'
-    img1 = df.getImgFromDb(person, 1, 'jpg')
-    df.detectFace(img1)
+    img_path = df.getImgFromDb(person, 1, 'jpg')
+    # print(img.startswith("data:image/"))
+    # df.analyzeExtraFeatures(img_path)
 
     ## Face Verification
     # person = 'michael_phelps'

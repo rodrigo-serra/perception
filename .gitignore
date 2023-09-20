@@ -1,3 +1,5 @@
 csv_data/
 images/
 __pycache__/
+data/
+db/
